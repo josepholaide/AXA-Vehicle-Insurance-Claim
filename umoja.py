@@ -18,16 +18,38 @@ from xgboost import XGBClassifier
 
 logging.getLogger().setLevel(logging.INFO)
 
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--scale_pos_weight',
+                      type = float,
+                      default = 8.1922929,
+                      help = 'Control the balance of positive and negative weights, useful for unbalanced classes.')
+  parser.add_argument('--colsample_bylevel',
+                      type = float,
+                      default = 0.8,
+                      help = 'the subsample ratio of columns for each level.')
+  parser.add_argument('--learning_rate',
+                      type = float,
+                      default = 0.143242,
+                      help = 'Step size shrinkage used in update to prevent overfitting.')
+  parser.add_argument('--max-depth',
+                      type = int,
+                      default = 10,
+                      help = 'Maximum depth of a tree.')
+  parser.add_argument('--n_estimators',
+                      type = int,
+                      default = 800 ,
+                      help = 'Number of trees to fit.')
+  parser.add_argument('--reg_alpha',
+                      type = float,
+                      default = 0.8,
+                      help = 'L1 regularization term on weights.')
+  args = parser.parse_args()
 
-def prep_data():
   # Load data
   all_data=pd.read_csv('https://raw.githubusercontent.com/Josepholaidepetro/Umojahack/main/maven/Train.csv')
   print("all_data size is : {}".format(all_data.shape))
-  return all_data
 
-def preprocess():
-  # call the function
-  all_data = prep_data()
   # Convert date columns to datetime datatypes 
   for i in all_data.columns:
     if i[-4:] == 'Date':
@@ -38,26 +60,23 @@ def preprocess():
   all_data['Age'].loc[all_data['Age'] < 0] = all_data['Age'].loc[all_data['Age'] < 0] * -1
   all_data['Age'] = np.where(all_data['Age'] == 320, 120, all_data['Age'])
   all_data['Age'] = np.where(all_data['Age'] > 320, 99, all_data['Age'])
-  return all_data
 
-def extract_date_info():
-  # call the function
-  all_data = preprocess()
+  all_data['Date diff'] = (all_data['Policy End Date'].dt.year - all_data['Policy Start Date'].dt.year) * 12 \
+  + (all_data['Policy End Date'].dt.month - all_data['Policy Start Date'].dt.month)
 
   # Extract Date features
   date_col = ['Policy Start Date', 'Policy End Date', 'First Transaction Date']
 
-  all_data['Date diff'] = (all_data['Policy End Date'].dt.year - all_data['Policy Start Date'].dt.year) * 12 \
-  + (all_data['Policy End Date'].dt.month - all_data['Policy Start Date'].dt.month)
-  for feat in date_col:
-      all_data[feat +'_day'] = all_data[feat].dt.day
-      all_data[feat +'_month'] = all_data[feat].dt.month
-      all_data[feat +'_quarter'] = all_data[feat].dt.quarter
-  all_data.drop(columns=date_col,axis=1,inplace=True)
-  return all_data
+  def extract_date_info(df,cols):
+    for feat in cols:
+        df[feat +'_day'] = df[feat].dt.day
+        df[feat +'_month'] = df[feat].dt.month
+        df[feat +'_quarter'] = df[feat].dt.quarter
+    df.drop(columns=date_col,axis=1,inplace=True)
 
-def deal_missing_data():
-  all_data = extract_date_info()
+  extract_date_info(all_data,date_col)
+
+  # deal_missing_data
   # copy data
   all_data1 = all_data.copy()
 
@@ -73,20 +92,15 @@ def deal_missing_data():
   for col in cat_feat:
     all_data1[col].fillna('NONE', inplace = True)
     
-  return all_data1
-
-def feat_eng():
-  all_data1 = deal_missing_data()
+ # feat_engineering
   all_data1['LGA_Name'] = all_data1['LGA_Name'].map(all_data1['LGA_Name'].value_counts().to_dict())
   all_data1['State'] = all_data1['State'].map(all_data1['State'].value_counts().to_dict())
   all_data1['Subject_Car_Make'] = all_data1['Subject_Car_Make'].map(all_data1['Subject_Car_Make'].value_counts().to_dict())
   all_data1['Subject_Car_Colour'] = all_data1['Subject_Car_Colour'].map(all_data1['Subject_Car_Colour'].value_counts().to_dict()) 
   mapper = {"Male":"M","Female":'F','Entity':'O','Joint Gender':'O',None:'O','NO GENDER':'O','NOT STATED':'O','SEX':'O', np.nan: 'O' }
   all_data1.Gender = all_data1.Gender.map(mapper)
-  return all_data1
 
-def encode_var():
-  all_data1 = feat_eng()
+  # encode_variable
   for i in ['ProductName', 'Car_Category']:
     encoder = LabelEncoder()
     all_data1[str(i)] = encoder.fit_transform(all_data1[str(i)])
@@ -98,11 +112,8 @@ def encode_var():
   all_data1.drop(columns=['ID', 'Subject_Car_Colour'],inplace=True)
   # convert columns with categorical columns to numbers
   all_data1=pd.get_dummies(all_data1)
-  return all_data1
 
-def modelling_data():
-  all_data1 = encode_var()
-
+  # modelling_data
   #Get the train dataset
   train_n = all_data1.copy()
   target = 'target'
@@ -137,44 +148,5 @@ def modelling_data():
 
   print('time=%.3f' % (stop - start))
   roc_auc_scores = scores
-  return roc_auc_scores
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--scale_pos_weight',
-                      type = float,
-                      default = 8.1922929,
-                      help = 'Control the balance of positive and negative weights, useful for unbalanced classes.')
-  parser.add_argument('--colsample_bylevel',
-                      type = float,
-                      default = 0.8,
-                      help = 'the subsample ratio of columns for each level.')
-  parser.add_argument('--learning_rate',
-                      type = float,
-                      default = 0.143242,
-                      help = 'Step size shrinkage used in update to prevent overfitting.')
-  parser.add_argument('--max-depth',
-                      type = int,
-                      default = 10,
-                      help = 'Maximum depth of a tree.')
-  parser.add_argument('--n_estimators',
-                      type = int,
-                      default = 800 ,
-                      help = 'Number of trees to fit.')
-  parser.add_argument('--reg_alpha',
-                      type = float,
-                      default = 0.8,
-                      help = 'L1 regularization term on weights.')
-  args = parser.parse_args()
 
-  prep_data()
-  preprocess()
-  extract_date_info()
-  deal_missing_data()
-  feat_eng()
-  encode_var()
-  roc_auc_score = modelling_data()
-
-  print('accuracy=%.3f' % roc_auc_score)
-
-
- 
+  print('accuracy=%.3f' % (roc_auc_scores))
