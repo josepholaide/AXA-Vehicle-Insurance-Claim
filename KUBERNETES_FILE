@@ -1,0 +1,69 @@
+---
+apiVersion: kubeflow.org/v1alpha3
+kind: Experiment
+metadata:
+  name: new
+  namespace: demo01
+spec:
+  parallelTrialCount: 3
+  maxTrialCount: 12
+  maxFailedTrialCount: 3
+  objective:
+    type: maximize
+    goal: 0.99
+    objectiveMetricName: accuracy
+  algorithm:
+    algorithmName: bayesianoptimization
+  metricsCollectorSpec:
+    kind: StdOut
+  parameters:
+    - name: n_estimators
+      parameterType: categorical
+      feasibleSpace:
+        list:
+          - 500
+          - 800
+    - name: learning_rate
+      parameterType: categorical
+      feasibleSpace:
+        list:
+          - 0.1
+          - 0.14
+    - name: max_depth
+      parameterType: int
+      feasibleSpace:
+        min: "8"
+        max: "10"
+  trialTemplate:
+    primaryContainerName: training-container
+    trialParameters:
+      - name: nEstimators
+        description: N estimators for the model
+        reference: n_estimators
+      - name: learningRate
+        description: Learning rate for the model
+        reference: learning_rate
+      - name: maxDepth
+        description: Max depth for the model
+        reference: max_depth
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        template:
+          metadata:
+            annotations:
+              sidecar.istio.io/inject: "false"
+          spec:
+            containers:
+              - name: training-container
+                image: "mavencodev/xgb_hack:1.3"
+                command:
+                  - python3
+                  - -u
+                  - /umoja.py
+                args:
+                  - "--n_estimators=${trialParameters.nEstimators}"
+                  - "--learning_rate=${trialParameters.learningRate}"
+                  - "--max_depth=${trialParameters.maxDepth}"
+            restartPolicy: Never
