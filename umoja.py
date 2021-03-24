@@ -14,20 +14,12 @@ warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
 from sklearn.metrics import roc_auc_score
-from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
 
 logging.getLogger().setLevel(logging.INFO)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument('--scale_pos_weight',
-                      type = float,
-                      default = 8.1922929,
-                      help = 'Control the balance of positive and negative weights, useful for unbalanced classes.')
-  parser.add_argument('--colsample_bylevel',
-                      type = float,
-                      default = 0.8,
-                      help = 'the subsample ratio of columns for each level.')
   parser.add_argument('--learning_rate',
                       type = float,
                       default = 0.143242,
@@ -40,14 +32,6 @@ if __name__ == '__main__':
                       type = int,
                       default = 800 ,
                       help = 'Number of trees to fit.')
-  parser.add_argument('--reg_alpha',
-                      type = float,
-                      default = 0.8,
-                      help = 'L1 regularization term on weights.')
-  parser.add_argument('--use_label_encoder',
-                      type = bool,
-                      default = False,
-                      help = 'Label Encoder.')
   args = parser.parse_args()
 
   # Load data
@@ -120,35 +104,25 @@ if __name__ == '__main__':
   # modelling_data
   #Get the train dataset
   train_n = all_data1.copy()
-  target = 'target'
-  features = [c for c in train_n.columns if c not in ['target']]
+  X= train_n.drop(columns=['target'])
+  y= train_n.target
+  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=44)
 
-  scores = 0
-  k = 5
-  kf = StratifiedKFold(k)
+  from sklearn.utils import class_weight
+  class_weight = dict(zip(np.unique(y), class_weight.compute_class_weight('balanced',
+                                                 np.unique(y),
+                                                 y))) 
+
   start = timestamp()
-  for i, (tr_idx, vr_idx) in enumerate(kf.split(train_n, train_n[target])):
-      xtrain, ytrain = train_n.loc[tr_idx, features], train_n.loc[tr_idx, target]
-      xval, yval = train_n.loc[vr_idx, features], train_n.loc[vr_idx, target]
-      
-    # training and validation
-      model=XGBClassifier(scale_pos_weight=args.scale_pos_weight, 
-                          max_depth=args.max_depth,
-                          learning_rate=args.learning_rate, 
-                          n_estimators=args.n_estimators, 
-                          colsample_bylevel=args.colsample_bylevel,
-                          reg_alpha=args.reg_alpha, use_label_encoder = args.use_label_encoder)
-      model.fit(xtrain, ytrain, eval_set=[(xval,yval)], early_stopping_rounds=100,verbose=False)
-      pred = model.predict(xval)
-
-      #predicting on test set
-      score = roc_auc_score(yval, pred)
-      #
-      scores += score/k
+  # training and validation
+  model=CatBoostClassifier(class_weights=class_weight, verbose=False,
+      max_depth=args.max_depth, eval_metric='AUC',
+      learning_rate=args.learning_rate, 
+      n_estimators=args.n_estimators, 
+      use_best_model=True,allow_writing_files=False, metric_period=20)
+  model.fit(X_train, y_train, eval_set=(X_test, y_test))
   
   stop = timestamp()
 
   print('time=%.3f' % (stop - start))
-  roc_auc_scores = scores
-
-  print('accuracy=%.3f' % (roc_auc_scores))
+  print('accuracy=%.3f' % (model.score(X_test, y_test)))
