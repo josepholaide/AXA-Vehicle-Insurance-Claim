@@ -1,5 +1,5 @@
 ---
-apiVersion: kubeflow.org/v1alpha3
+apiVersion: kubeflow.org/v1beta1
 kind: Experiment
 metadata:
   name: new
