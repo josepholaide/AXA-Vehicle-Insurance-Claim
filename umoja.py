@@ -44,11 +44,15 @@ if __name__ == '__main__':
                       type = float,
                       default = 0.8,
                       help = 'L1 regularization term on weights.')
+  parser.add_argument('--use_label_encoder',
+                      type = bool,
+                      default = False,
+                      help = 'L1abel Encoder.')
   args = parser.parse_args()
 
   # Load data
   all_data=pd.read_csv('https://raw.githubusercontent.com/Josepholaidepetro/Umojahack/main/maven/Train.csv')
-  print("all_data size is : {}".format(all_data.shape))
+  # print("all_data size is : {}".format(all_data.shape))
 
   # Convert date columns to datetime datatypes 
   for i in all_data.columns:
@@ -103,7 +107,7 @@ if __name__ == '__main__':
   # encode_variable
   for i in ['ProductName', 'Car_Category']:
     encoder = LabelEncoder()
-    all_data1[str(i)] = encoder.fit_transform(all_data1[str(i)])
+    all_data1[i] = encoder.fit_transform(all_data1[i])
 
   # feat engineering with the encoded variable
   all_data1['no_pol_prod_name'] = all_data1['No_Pol'] + all_data1['ProductName']
@@ -135,7 +139,7 @@ if __name__ == '__main__':
                           silent=True,
                           metrics='auc',
                           colsample_bylevel=args.colsample_bylevel,
-                          reg_alpha=args.reg_alpha)
+                          reg_alpha=args.reg_alpha, use_label_encoder = args.use_label_encoder)
       model.fit(xtrain, ytrain, eval_set=[(xval,yval)], early_stopping_rounds=100,verbose=False)
       pred = model.predict(xval)
 
