@@ -132,7 +132,7 @@ if __name__ == '__main__':
       xval, yval = train_n.loc[vr_idx, features], train_n.loc[vr_idx, target]
       
     # training and validation
-      model=XGBClassifier(scale_pos_weight=args.scale_pos_weight, verbosity=0, 
+      model=XGBClassifier(scale_pos_weight=args.scale_pos_weight, 
                           max_depth=args.max_depth,
                           learning_rate=args.learning_rate, 
                           n_estimators=args.n_estimators, 
