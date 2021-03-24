@@ -47,7 +47,7 @@ if __name__ == '__main__':
   parser.add_argument('--use_label_encoder',
                       type = bool,
                       default = False,
-                      help = 'L1abel Encoder.')
+                      help = 'Label Encoder.')
   args = parser.parse_args()
 
   # Load data
@@ -136,8 +136,6 @@ if __name__ == '__main__':
                           max_depth=args.max_depth,
                           learning_rate=args.learning_rate, 
                           n_estimators=args.n_estimators, 
-                          silent=True,
-                          metrics='auc',
                           colsample_bylevel=args.colsample_bylevel,
                           reg_alpha=args.reg_alpha, use_label_encoder = args.use_label_encoder)
       model.fit(xtrain, ytrain, eval_set=[(xval,yval)], early_stopping_rounds=100,verbose=False)
