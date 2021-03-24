@@ -42,6 +42,10 @@ if __name__ == '__main__':
                       type = int,
                       default = 20 ,
                       help = '')
+  parser.add_argument('--verbose',
+                      type = bool,
+                      default = False ,
+                      help = '')
   args = parser.parse_args()
 
   # Load data
@@ -116,23 +120,17 @@ if __name__ == '__main__':
   train_n = all_data1.copy()
   X= train_n.drop(columns=['target'])
   y= train_n.target
-  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=44)
+  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=44)
 
-  from sklearn.utils import class_weight
-  class_weight = dict(zip(np.unique(y), class_weight.compute_class_weight('balanced',
-                                                 np.unique(y),
-                                                 y))) 
-
-  start = timestamp()
   # training and validation
-  model=CatBoostClassifier(class_weights=class_weight, verbose=False,
+  model=CatBoostClassifier(verbose=args.verbose,
       max_depth=args.max_depth,
       learning_rate=args.learning_rate, 
-      n_estimators=args.n_estimators, 
-      use_best_model=args.use_best_model,allow_writing_files=args.allow_writing_files, metric_period=args.metric_period)
-  model.fit(X_train, y_train, eval_set=(X_test, y_test))
-  
+      n_estimators=args.n_estimators)
+  start = timestamp()
+  model.fit(X_train, y_train)
   stop = timestamp()
+  predictions = model.predict(X_test)
 
   print('time=%.3f' % (stop - start))
-  print('accuracy=%.3f' % (accuracy_score(X_test, y_test)))
+  print('accuracy=%.3f' % (accuracy_score(predictions, y_test)))
