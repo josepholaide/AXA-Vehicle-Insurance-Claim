@@ -32,7 +32,7 @@ if __name__ == '__main__':
                       type = float,
                       default = 0.143242,
                       help = 'Step size shrinkage used in update to prevent overfitting.')
-  parser.add_argument('--max-depth',
+  parser.add_argument('--max_depth',
                       type = int,
                       default = 10,
                       help = 'Maximum depth of a tree.')
