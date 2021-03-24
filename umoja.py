@@ -13,10 +13,8 @@ warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
 from catboost import CatBoostClassifier
-
-logging.getLogger().setLevel(logging.INFO)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
@@ -32,6 +30,18 @@ if __name__ == '__main__':
                       type = int,
                       default = 800 ,
                       help = 'Number of trees to fit.')
+  parser.add_argument('--use_best_model',
+                      type = bool,
+                      default = True ,
+                      help = '')
+  parser.add_argument('--allow_writing_files',
+                      type = bool,
+                      default = False ,
+                      help = '')
+  parser.add_argument('--metric_period',
+                      type = int,
+                      default = 20 ,
+                      help = '')
   args = parser.parse_args()
 
   # Load data
@@ -116,13 +126,13 @@ if __name__ == '__main__':
   start = timestamp()
   # training and validation
   model=CatBoostClassifier(class_weights=class_weight, verbose=False,
-      max_depth=args.max_depth, eval_metric='AUC',
+      max_depth=args.max_depth,
       learning_rate=args.learning_rate, 
       n_estimators=args.n_estimators, 
-      use_best_model=True,allow_writing_files=False, metric_period=20)
+      use_best_model=args.use_best_model,allow_writing_files=args.allow_writing_files, metric_period=args.metric_period)
   model.fit(X_train, y_train, eval_set=(X_test, y_test))
   
   stop = timestamp()
 
   print('time=%.3f' % (stop - start))
-  print('accuracy=%.3f' % (model.score(X_test, y_test)))
+  print('accuracy=%.3f' % (accuracy_score(X_test, y_test)))
